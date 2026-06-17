@@ -1,9 +1,10 @@
-# NOTE: This file is for HashiCorp specific licensing automation and can be deleted after creating a new repo with this template.
+# Configuration for the copywrite tool, which manages copyright/license headers.
 schema_version = 1
 
 project {
-  license        = "MPL-2.0"
-  copyright_year = 2021
+  license          = "Apache-2.0"
+  copyright_holder = "FoundryLabs, Inc."
+  copyright_year   = 2026
 
   header_ignore = [
     # internal catalog metadata (prose)

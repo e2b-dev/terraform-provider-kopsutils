@@ -1,64 +1,93 @@
-# Terraform Provider Scaffolding (Terraform Plugin Framework)
+# terraform-provider-kopsutils
 
-_This template repository is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework). The template repository built on the [Terraform Plugin SDK](https://github.com/hashicorp/terraform-plugin-sdk) can be found at [terraform-provider-scaffolding](https://github.com/hashicorp/terraform-provider-scaffolding). See [Which SDK Should I Use?](https://developer.hashicorp.com/terraform/plugin/framework-benefits) in the Terraform documentation for additional information._
+A small Terraform/OpenTofu provider that exposes kОps' name-truncation helpers,
+OCI image digest resolution, and OIDC service-account JWKS generation as data
+sources, so HCL can compute kОps-equivalent values natively instead of relying
+on precomputed inputs.
 
-This repository is a *template* for a [Terraform](https://www.terraform.io) provider. It is intended as a starting point for creating Terraform providers, containing:
+The truncation kОps applies (an `fnv32a` hash, `base32hex`-encoded and
+truncated) cannot be expressed in pure HCL. The `gce-cluster` module uses this
+provider's `kopsutils_limited_length_name` data source to compute the
+instance-template `name_prefix` directly and the `kopsutils_cluster_hash` data
+source to compute the service-account truncation hash.
 
-- A resource and a data source (`internal/provider/`),
-- Examples (`examples/`) and generated documentation (`docs/`),
-- Miscellaneous meta files.
+The logic in `internal/truncate`, `internal/jwks`, and `internal/ociref` is a
+byte-for-byte port of the corresponding kОps helpers, verified against golden
+values in the package tests.
 
-These files contain boilerplate code that you will need to edit to create your own Terraform provider. Tutorials for creating Terraform providers can be found on the [HashiCorp Developer](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework) platform. _Terraform Plugin Framework specific guides are titled accordingly._
+## Data sources
 
-Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
+### `kopsutils_limited_length_name`
 
-Once you've written your provider, you'll want to [publish it on the Terraform Registry](https://developer.hashicorp.com/terraform/registry/providers/publishing) so that others can use it.
+Computes `gce.LimitedLengthName(input, max_length)`.
+
+| field        | type   | role     | description                                              |
+| ------------ | ------ | -------- | -------------------------------------------------------- |
+| `input`      | string | required | name to (possibly) truncate                              |
+| `max_length` | number | required | maximum length of the result                             |
+| `result`     | string | computed | `input` unchanged if it fits, else `base[:max-7]-<hash6>` |
+
+### `kopsutils_cluster_hash`
+
+Computes `lower(base32hex(fnv32a(SafeClusterName(cluster_name))))[:length]`.
+
+| field          | type   | role     | description                                  |
+| -------------- | ------ | -------- | -------------------------------------------- |
+| `cluster_name` | string | required | dotted cluster name, e.g. `k8s1.example.dev` |
+| `length`       | number | optional | hash chars to keep (default `6`)             |
+| `result`       | string | computed | the cluster name hash                        |
+
+### `kopsutils_oci_reference`
+
+Resolves an OCI image to an immutable, digest-pinned reference by querying the
+registry (the same way kОps pins images: `crane.Digest` with the default
+keychain).
+
+| field       | type   | role     | description                                       |
+| ----------- | ------ | -------- | ------------------------------------------------- |
+| `image`     | string | required | repository without tag/digest                     |
+| `tag`       | string | required | image tag                                         |
+| `platform`  | string | optional | `os/arch[/variant]`; omit for the index digest    |
+| `digest`    | string | computed | resolved manifest digest (`sha256:...`)           |
+| `reference` | string | computed | fully-pinned `image:tag@digest`                   |
+
+### `kopsutils_service_account_jwks`
+
+Builds the cluster's OIDC JSON Web Key Set (the `/openid/v1/jwks` document) from
+the service-account public key(s), byte-identically to kОps.
+
+| field                         | type   | role     | description                              |
+| ----------------------------- | ------ | -------- | ---------------------------------------- |
+| `service_account_public_keys` | string | required | service-account public key PEM(s)        |
+| `json`                        | string | computed | the full JWKS document                   |
+| `keys`                        | list   | computed | structured JWK entries (kid/kty/use/alg/n/e) |
 
 ## Requirements
 
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.24
+- [Go](https://golang.org/doc/install) >= 1.25
+
+> The provider depends on `terraform-plugin-framework`, whose module graph
+> requires `go >= 1.25`.
 
 ## Building the Provider
-
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
 
 ```shell
 go install
 ```
 
-## Adding Dependencies
-
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using Go modules.
-
-To add a new dependency `github.com/author/dependency` to your Terraform provider:
-
-```shell
-go get github.com/author/dependency
-go mod tidy
-```
-
-Then commit the changes to `go.mod` and `go.sum`.
-
-## Using the Provider
-
-Fill this in for each provider
+This builds the provider and puts the binary in the `$GOPATH/bin` directory.
 
 ## Developing the Provider
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
-
-To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
-
 To generate or update documentation, run `make generate`.
 
-In order to run the full suite of Acceptance tests, run `make testacc`.
-
-*Note:* Acceptance tests create real resources, and often cost money to run.
+To run the unit tests:
 
 ```shell
-make testacc
+go test ./...
 ```
+
+In order to run the full suite of acceptance tests, run `make testacc`.
+
+*Note:* Acceptance tests create real resources, and often cost money to run.
