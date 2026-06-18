@@ -6,12 +6,12 @@ package truncate
 import "testing"
 
 // cluster is the example1 golden cluster name.
-const cluster = "k8s1.tomas-virgl.e2b-test.dev"
+const cluster = "cluster.e2b.dev"
 
 func TestHashString_ClusterHash(t *testing.T) {
 	// cluster_name_hash from tests/example1/module/main.tf.
 	got := HashString(SafeClusterName(cluster), 6)
-	if want := "g73ca7"; got != want {
+	if want := "i7tm67"; got != want {
 		t.Fatalf("HashString = %q, want %q", got, want)
 	}
 }
@@ -35,12 +35,12 @@ func TestLimitedLengthName_GoldenIGPrefixes(t *testing.T) {
 		ig   string
 		want string
 	}{
-		{"control-plane-us-west1-a", "control-plane-us-west1-a--f3tvsp"},
-		{"control-plane-us-west1-b", "control-plane-us-west1-b--5i3vtm"},
-		{"control-plane-us-west1-c", "control-plane-us-west1-c--vh54si"},
-		{"nodes-us-west1-a", "nodes-us-west1-a-k8s1-tom-rsmihs"},
-		{"nodes-us-west1-b", "nodes-us-west1-b-k8s1-tom-4vds37"},
-		{"nodes-us-west1-c", "nodes-us-west1-c-k8s1-tom-m565vu"},
+		{"control-plane-us-west1-a", "control-plane-us-west1-a--do4lm3"},
+		{"control-plane-us-west1-b", "control-plane-us-west1-b--gk1uv6"},
+		{"control-plane-us-west1-c", "control-plane-us-west1-c--83strm"},
+		{"nodes-us-west1-a", "nodes-us-west1-a-cluster-e2b-dev"},
+		{"nodes-us-west1-b", "nodes-us-west1-b-cluster-e2b-dev"},
+		{"nodes-us-west1-c", "nodes-us-west1-c-cluster-e2b-dev"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.ig, func(t *testing.T) {
