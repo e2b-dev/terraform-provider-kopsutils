@@ -1,4 +1,4 @@
-// Copyright (c) FoundryLabs, Inc.
+// Copyright FoundryLabs, Inc. 2026
 // SPDX-License-Identifier: Apache-2.0
 
 // Package jwks builds the OIDC JSON Web Key Set (the /openid/v1/jwks document)

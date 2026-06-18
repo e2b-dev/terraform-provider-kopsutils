@@ -1,4 +1,4 @@
-// Copyright (c) FoundryLabs, Inc.
+// Copyright FoundryLabs, Inc. 2026
 // SPDX-License-Identifier: Apache-2.0
 
 // Package truncate is a byte-for-byte port of the kOps name-truncation helpers
