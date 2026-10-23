@@ -2,6 +2,8 @@ module github.com/e2b-dev/terraform-provider-kopsutils
 
 go 1.25.8
 
+toolchain go1.26.10
+
 require (
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/go-containerregistry v0.21.7
